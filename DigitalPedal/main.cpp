@@ -8,21 +8,25 @@
 // Configuration constants
 constexpr uint16_t SAMPLE_RATE = 44100; // Hz
 constexpr size_t BUFFER_SIZE = 512; // bytes
-constexpr float DELAY_TIME = 0.5;  // seconds
+constexpr float DELAY_TIME = 0.5f;  // seconds
+constexpr float DELAY_TIME_DELTA = 0.05f; // seconds
+constexpr float FEEDBACK = 0.5f;  // from 0 to 1
+constexpr float FEEDBACK_DELTA = 0.05f;
 
 // Simple Delay class
 class Delay {
 private:
+	uint16_t sampleRate;
+
 	size_t delayBufferSize;
 	int readIndex;
 	int writeIndex;
 	std::vector<float> delayBuffer;
-	uint16_t sampleRate;
 
 public:
-	Delay(float delayTime, int sampleRate) {
-		this->delayTime = delayTime;
-		this->sampleRate = sampleRate;
+	Delay(float delayTime, int sampleRate, float feedback)
+		: delayTime(delayTime), sampleRate(sampleRate), feedback(feedback) {
+
 		delayBufferSize = static_cast<size_t>(delayTime * sampleRate);
 		delayBuffer.resize(delayBufferSize, 0.0f);
 		readIndex = 0;
@@ -31,7 +35,7 @@ public:
 
 	float process(float input) {
 		float delayedSample = delayBuffer[readIndex];
-		delayBuffer[writeIndex] = input;
+		delayBuffer[writeIndex] = input + feedback * delayedSample;
 
 		readIndex = (readIndex + 1) % delayBufferSize;
 		writeIndex = (writeIndex + 1) % delayBufferSize;
@@ -47,11 +51,21 @@ public:
 	float delayTime;
 	void adjustDelayTime(float value) {
 		delayTime += value;
-		if(delayTime < 0.1) {
-			delayTime = 0.1;
+		if(delayTime < DELAY_TIME_DELTA) {
+			delayTime = DELAY_TIME_DELTA;
 		}
 		delayBufferSize = static_cast<size_t>(delayTime * sampleRate);
 		delayBuffer.resize(delayBufferSize, 0.0f);
+	}
+	
+	float feedback;
+	void adjustFeedback(float value) {
+		feedback += value;
+		if(feedback < 0) {
+			feedback = 0;
+		} else if(feedback > 1) {
+			feedback = 1;
+		}
 	}
 };
 
@@ -82,7 +96,6 @@ int main() {
 
 	/// CONTROL:
 	bool isArrowKeyPressed = false;
-	float delayTimeIncrement = 0.05; // seconds
 
 	// Initialize PortAudio
 	err = Pa_Initialize();
@@ -92,7 +105,7 @@ int main() {
 	}
 
 	// Create delay effect
-	Delay delayEffect(DELAY_TIME, SAMPLE_RATE);
+	Delay delayEffect(DELAY_TIME, SAMPLE_RATE, FEEDBACK);
 
 	// Open PortAudio stream
 	err = Pa_OpenDefaultStream(&stream, 1, 2, paFloat32, SAMPLE_RATE, BUFFER_SIZE, paCallback, &delayEffect);
@@ -116,26 +129,43 @@ int main() {
 
 	std::cout << "---CONTROLS---" << std::endl;
 	std::cout << "Toggle Delay: Spacebar" << std::endl;
-	std::cout << "Adjust Delay Time: <- / ->" << std::endl;
+	std::cout << "Adjust Delay Time: LEFT / RIGHT arrow keys" << std::endl;
+	std::cout << "Adjust Feedback: DOWN / UP arrow keys" << std::endl;
 	std::cout << "Exit: Enter / ESC" << std::endl << std::endl;
 
 	while(true) {
 		char key = _getch();
 
-		//// DELAY TIME:
+		//// ADJUST:
+		// Arrow
 		if(key == -32 || isArrowKeyPressed) {
 			isArrowKeyPressed = true;
 
+			//// DELAY TIME:
 			// Left arrow
 			if(key == 75) {
-				delayEffect.adjustDelayTime(-delayTimeIncrement);
+				delayEffect.adjustDelayTime(-DELAY_TIME_DELTA);
 				std::cout << "Delay Time: " << delayEffect.delayTime << " s" << std::endl;
 				isArrowKeyPressed = false;
 			}
 			// Right arrow
 			else if(key == 77) {
-				delayEffect.adjustDelayTime(delayTimeIncrement);
+				delayEffect.adjustDelayTime(DELAY_TIME_DELTA);
 				std::cout << "Delay Time: " << delayEffect.delayTime << " s" << std::endl;
+				isArrowKeyPressed = false;
+			}
+
+			//// FEEDBACK:
+			// Down arrow
+			if(key == 80) {
+				delayEffect.adjustFeedback(-FEEDBACK_DELTA);
+				std::cout << "Feedback: " << delayEffect.feedback << std::endl;
+				isArrowKeyPressed = false;
+			}
+			// Up arrow
+			else if(key == 72) {
+				delayEffect.adjustFeedback(FEEDBACK_DELTA);
+				std::cout << "Feedback: " << delayEffect.feedback << std::endl;
 				isArrowKeyPressed = false;
 			}
 		}
