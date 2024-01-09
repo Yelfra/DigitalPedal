@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# DigitalPedal
+portaudio
+DigitalPedal/x64
+
 # User-specific files
 *.rsuser
 *.suo
@@ -19,9 +23,9 @@ mono_crash.*
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
-[Rr]elease/
+#[Rr]elease/
 [Rr]eleases/
-x64/
+#x64/
 x86/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
