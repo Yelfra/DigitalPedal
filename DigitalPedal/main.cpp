@@ -5,15 +5,15 @@
 
 #include "portaudio.h"
 
-// Configuration constants
+//// CONFIGURATION CONSTANTS | KONFIGURACIJSKE KONSTANTE:
 constexpr uint16_t SAMPLE_RATE = 44100; // Hz
-constexpr size_t BUFFER_SIZE = 512; // bytes
-constexpr float DELAY_TIME = 0.5f;  // seconds
-constexpr float DELAY_TIME_DELTA = 0.05f; // seconds
-constexpr float FEEDBACK = 0.5f;  // from 0 to 1
+constexpr size_t BUFFER_SIZE = 512; // B
+constexpr float DELAY_TIME = 0.5f;  // s
+constexpr float DELAY_TIME_DELTA = 0.05f; // s
+constexpr float FEEDBACK = 0.5f;  // from 0 to 1 | od 0 do 1
 constexpr float FEEDBACK_DELTA = 0.05f;
 
-// Simple Delay class
+//// DELAY CLASS | KLASA KAŠNJENJA:
 class Delay {
 private:
 	uint16_t sampleRate;
@@ -33,6 +33,7 @@ public:
 		writeIndex = 0;
 	}
 
+	// Delaying input with feedback | Kašnjenje ulaza s jekom
 	float process(float input) {
 		float delayedSample = delayBuffer[readIndex];
 		delayBuffer[writeIndex] = input + feedback * delayedSample;
@@ -43,11 +44,13 @@ public:
 		return delayedSample;
 	}
 
+	// Turn delay off/on | Iskljuèi/ukljuèi kašnjenje
 	bool isDelayActive = false;
 	void toggleDelay() {
 		isDelayActive = !isDelayActive;
 	}
 
+	// Increase/decrease delay time | Poveæaj/smanji vrijeme kašnjenja
 	float delayTime;
 	void adjustDelayTime(float value) {
 		delayTime += value;
@@ -58,6 +61,7 @@ public:
 		delayBuffer.resize(delayBufferSize, 0.0f);
 	}
 	
+	// Increace/decrease feedback | Pojaèaj/smanji jeku
 	float feedback;
 	void adjustFeedback(float value) {
 		feedback += value;
@@ -69,7 +73,7 @@ public:
 	}
 };
 
-// PortAudio callback function
+//// PORTAUDIO CALLBACK FUNCTION | FUNKCIJA POVRATNOG POZIVA PORTAUDIO-A:
 static int paCallback(const void* inputBuffer, void* outputBuffer,
 					  unsigned long framesPerBuffer,
 					  const PaStreamCallbackTimeInfo* timeInfo,
@@ -90,24 +94,24 @@ static int paCallback(const void* inputBuffer, void* outputBuffer,
 }
 
 int main() {
-	//// PORTAUDIO:
+	// PortAudio:
 	PaStream* stream;
 	PaError err;
 
-	/// CONTROL:
+	// Control | Upravljanje:
 	bool isArrowKeyPressed = false;
 
-	// Initialize PortAudio
+	// Initialize PortAudio | Inicijaliziraj PortAudio
 	err = Pa_Initialize();
 	if(err != paNoError) {
 		std::cerr << "PortAudio initialization failed: " << Pa_GetErrorText(err) << std::endl;
 		return -1;
 	}
 
-	// Create delay effect
+	// Create delay effect | Stvori efekt kašnjenja
 	Delay delayEffect(DELAY_TIME, SAMPLE_RATE, FEEDBACK);
 
-	// Open PortAudio stream
+	// Open PortAudio stream | Otvori strujanje PortAudio-a
 	err = Pa_OpenDefaultStream(&stream, 1, 2, paFloat32, SAMPLE_RATE, BUFFER_SIZE, paCallback, &delayEffect);
 	if(err != paNoError) {
 		std::cerr << "PortAudio stream opening failed: " << Pa_GetErrorText(err) << std::endl;
@@ -115,7 +119,7 @@ int main() {
 		return -1;
 	}
 
-	// Start the stream
+	// Start the stream | Pokreni strujanje
 	err = Pa_StartStream(stream);
 	if(err != paNoError) {
 		std::cerr << "PortAudio stream starting failed: " << Pa_GetErrorText(err) << std::endl;
@@ -124,6 +128,7 @@ int main() {
 		return -1;
 	}
 
+	//// USER MANUAL | KORISNIÈKE UPUTE:
 	std::cout << "----DELAY-----" << std::endl;
 	std::cout << "Delay Time: " << delayEffect.delayTime << " s" << std::endl;
 
@@ -136,53 +141,53 @@ int main() {
 	while(true) {
 		char key = _getch();
 
-		//// ADJUST:
-		// Arrow
+		//// ADJUST | PODESI:
+		// Arrow | Strelica
 		if(key == -32 || isArrowKeyPressed) {
 			isArrowKeyPressed = true;
 
-			//// DELAY TIME:
-			// Left arrow
+			//// DELAY TIME | VRIJEME KAŠNJENJA:
+			// Left arrow | Strelica lijevo
 			if(key == 75) {
 				delayEffect.adjustDelayTime(-DELAY_TIME_DELTA);
 				std::cout << "Delay Time: " << delayEffect.delayTime << " s" << std::endl;
 				isArrowKeyPressed = false;
 			}
-			// Right arrow
+			// Right arrow | Strelica desno
 			else if(key == 77) {
 				delayEffect.adjustDelayTime(DELAY_TIME_DELTA);
 				std::cout << "Delay Time: " << delayEffect.delayTime << " s" << std::endl;
 				isArrowKeyPressed = false;
 			}
 
-			//// FEEDBACK:
-			// Down arrow
+			//// FEEDBACK | JEKA:
+			// Down arrow | Strelica dolje
 			if(key == 80) {
 				delayEffect.adjustFeedback(-FEEDBACK_DELTA);
 				std::cout << "Feedback: " << delayEffect.feedback << std::endl;
 				isArrowKeyPressed = false;
 			}
-			// Up arrow
+			// Up arrow | Strelica gore
 			else if(key == 72) {
 				delayEffect.adjustFeedback(FEEDBACK_DELTA);
 				std::cout << "Feedback: " << delayEffect.feedback << std::endl;
 				isArrowKeyPressed = false;
 			}
 		}
-		//// TOGGLE DELAY:
-		// Spacebar
+		//// TOGGLE DELAY | UKLJUÈI/ISKLJUÈI KAŠNJENJE:
+		// Spacebar | Razmaknica
 		else if(key == 32) {
 			delayEffect.toggleDelay();
 			std::cout << "Delay Effect " << (delayEffect.isDelayActive ? "ON" : "OFF") << std::endl;
 		}
-		//// EXIT:
+		//// EXIT | IZLAZ:
 		// Enter || ESC
 		else if(key == 13 || key == 27) {
 			break;
 		}
 	}
 
-	// Stop and close the stream
+	// Stop and close the stream | Zaustavi i zatvori strujanje
 	err = Pa_StopStream(stream);
 	if(err != paNoError) {
 		std::cerr << "PortAudio stream stopping failed: " << Pa_GetErrorText(err) << std::endl;
@@ -192,7 +197,7 @@ int main() {
 		std::cerr << "PortAudio stream closing failed: " << Pa_GetErrorText(err) << std::endl;
 	}
 
-	// Terminate PortAudio
+	// Terminate PortAudio | Prekini PortAudio
 	Pa_Terminate();
 
 	return 0;
